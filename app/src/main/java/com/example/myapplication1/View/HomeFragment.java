@@ -18,6 +18,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
+import android.widget.Spinner;
 import android.widget.Toast;
 
 import com.example.myapplication1.Adapter.DataAdapter;
@@ -29,6 +30,9 @@ import com.github.nkzawa.emitter.Emitter;
 import com.github.nkzawa.socketio.client.Ack;
 import com.github.nkzawa.socketio.client.IO;
 import com.github.nkzawa.socketio.client.Socket;
+import com.github.ybq.android.spinkit.sprite.Sprite;
+import com.github.ybq.android.spinkit.style.CubeGrid;
+import com.github.ybq.android.spinkit.style.WanderingCubes;
 import com.google.gson.Gson;
 
 import org.json.JSONArray;
@@ -66,7 +70,8 @@ public class HomeFragment extends Fragment implements DataAdapter.OnItemClickLis
         mrecyclerView.setHasFixedSize(true);
         notificationManagerCompat=NotificationManagerCompat.from(getActivity());
         progressBar=(ProgressBar)view.findViewById(R.id.progressbar);
-
+        Sprite cubeGrid = new CubeGrid();
+        progressBar.setIndeterminateDrawable(cubeGrid);
 
 
         Retrofit retrofit =new Retrofit.Builder()

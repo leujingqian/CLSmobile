@@ -14,6 +14,8 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -25,6 +27,9 @@ import com.example.myapplication1.Model.QuizQuestion;
 import com.example.myapplication1.Model.Quizid;
 import com.example.myapplication1.Model.Quizzes;
 import com.example.myapplication1.R;
+import com.github.ybq.android.spinkit.sprite.Sprite;
+import com.github.ybq.android.spinkit.style.DoubleBounce;
+import com.github.ybq.android.spinkit.style.WanderingCubes;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -60,12 +65,14 @@ private String quizID;
     private showquestionadapter adapter;
     private String[]stringlist;
 public static final String QUIZTYPE="quiztype";
+private LinearLayout linearLayout3;
+private ProgressBar progressBar;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_quiz_detail);
+        setContentView(R.layout.scrollview_quizdetail);
 
         mrecyclerView = (RecyclerView) findViewById(R.id.showquestion_recycler_view);
         mrecyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -80,6 +87,11 @@ public static final String QUIZTYPE="quiztype";
         favourite =findViewById(R.id.favoutitebutton);
         share=findViewById(R.id.sharebutton);
         mcq=(Button) findViewById(R.id.mcq);
+        linearLayout3=findViewById(R.id.linearLayout3);
+        progressBar=findViewById(R.id.spin_kit);
+        Sprite wanderingCubes = new WanderingCubes();
+        progressBar.setIndeterminateDrawable(wanderingCubes);
+        linearLayout3.setVisibility(View.GONE);
         getFavouriteList();
         SharedPreferences sharedPreferencetoken =getSharedPreferences("userdata", Context.MODE_PRIVATE);
         favouritelist=sharedPreferencetoken.getString("favourite",null);
@@ -115,8 +127,9 @@ public static final String QUIZTYPE="quiztype";
                 questionlist=new ArrayList<>(response.body().getQuiz().getQuestions());
                 adapter=new showquestionadapter(questionlist,getApplicationContext());
                 mrecyclerView.setAdapter(adapter);
-                mrecyclerView.setLayoutFrozen(true);
                 final Quizid quizzes=response.body();
+                linearLayout3.setVisibility(View.VISIBLE);
+                progressBar.setVisibility(View.GONE);
                 title.setText(quizzes.getQuiz().getTitle());
                 creator.setText("Created By: "+quizzes.getQuiz().getCreator().getName());
                 totalplay.setText(quizzes.getQuiz().getPlays()+" Plays");
