@@ -1,9 +1,10 @@
 package com.example.myapplication1.View;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
-
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -18,9 +19,9 @@ import com.github.nkzawa.emitter.Emitter;
 import com.github.nkzawa.socketio.client.Ack;
 import com.github.nkzawa.socketio.client.IO;
 import com.github.nkzawa.socketio.client.Socket;
-import com.google.gson.JsonArray;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.net.URISyntaxException;
@@ -36,6 +37,7 @@ public class LiveGame extends AppCompatActivity {
     public TextView questionnum,studentsummary,result1;
 
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -47,14 +49,20 @@ public class LiveGame extends AppCompatActivity {
         }
         JSONObject userdetail = new JSONObject();
         try {
-            userdetail.put("name", Nickname);
-            userdetail.put("pin", GamePin);
+            userdetail.put("name",  Nickname);
+            userdetail.put("gameId", GamePin);
         } catch (Exception e) {
             e.printStackTrace();
         }
+        SharedPreferences sharedPreferencetoken =getSharedPreferences("userdata", Context.MODE_PRIVATE);
 
+        String token = sharedPreferencetoken.getString("Token", null);
         try {
-            socket = IO.socket("http://192.168.0.173:3000/");
+            IO.Options opts = new IO.Options();
+            opts.forceNew = true;
+            opts.query = "auth_token=" + token;
+//             Socket socket = IO.socket("https://collaborative-learning-system.herokuapp.com/", opts);
+            socket=IO.socket("https://collaborative-learning-system.herokuapp.com/",opts);
             socket.connect();
             socket.emit("join-game", userdetail, new Ack() {
                 @Override
@@ -62,27 +70,25 @@ public class LiveGame extends AppCompatActivity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            Boolean response = (Boolean) args[0];
-                            if (response == true) {
+                           JSONObject object=(JSONObject) args[0];
+                           try {
+                               if(object.getBoolean("isJoined")==false){
+                                   Toast.makeText(LiveGame.this,object.getString("error"),Toast.LENGTH_LONG).show();
+                                   finish();
+                                   socket.disconnect();
+                               }
+                               else{
+                                   Toast.makeText(LiveGame.this,"Correct",Toast.LENGTH_LONG).show();
+                                   setContentView(R.layout.waitingpage);
+                                   TextView gamepin = (TextView) findViewById(R.id.textView);
+                                   TextView nickaname = (TextView) findViewById(R.id.textView3);
+                                   gamepin.setText("  PIN: "+GamePin);
+                                   nickaname.setText("  "+Nickname);
+                               }
 
-                                JSONObject object = (JSONObject) args[1];
-                                setContentView(R.layout.waitingpage);
-//                                Toast.makeText(LiveGame.this, "wowww cool ", Toast.LENGTH_SHORT).show();
-                                TextView gamepin = (TextView) findViewById(R.id.textView);
-                                TextView nickaname = (TextView) findViewById(R.id.textView3);
-                                gamepin.setText("  PIN: "+GamePin);
-                                try {
-                                    nickaname.setText("  "+object.getString("name"));
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                }
-
-
-                            } else {
-                                Toast.makeText(LiveGame.this, "Nickname or Gamepin is invalid", Toast.LENGTH_SHORT).show();
-                                finish();
-                                socket.emit("disconnect");
-                            }
+                           }catch (Exception e){
+                               e.printStackTrace();
+                           }
 
 
                         }
@@ -92,7 +98,7 @@ public class LiveGame extends AppCompatActivity {
             socket.on("player-next-question", new Emitter.Listener() {
                 @Override
                 public void call(final Object... args) {
-                    socket.emit("questionReceived");
+                    socket.emit("receive-question");
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -101,12 +107,14 @@ public class LiveGame extends AppCompatActivity {
                             setContentView(R.layout.chooseanswer);
                             studentsummary=findViewById(R.id.studentsummary);
                             studentsummary.setVisibility(v.INVISIBLE);
+                            result1=findViewById(R.id.result);
+                            result1.setVisibility(v.INVISIBLE);
                             try {
                                questionnum =findViewById(R.id.questionnumber);
                                 int questionindex=choicesdetail.getInt("questionIndex");
                                 int questionlength=choicesdetail.getInt("questionLength");
-                                questionnum.setText("" + questionindex+" \\ "+questionlength );
-                                JSONArray jsonArray=choicesdetail.getJSONArray("answersId");
+                                questionnum.setText("" + questionindex+"\\"+questionlength );
+                                JSONArray jsonArray=choicesdetail.getJSONArray("choiceIds");
                                 final String choicesA=jsonArray.getString(0);
                                 final String choicesB=jsonArray.getString(1);
                                 final String choicesC=jsonArray.getString(2);
@@ -119,8 +127,6 @@ public class LiveGame extends AppCompatActivity {
                                 final Button B=findViewById(R.id.B);
                                 final Button C=findViewById(R.id.C);
                                 final Button D=findViewById(R.id.D);
-                                result1=findViewById(R.id.result);
-                                result1.setVisibility(v.INVISIBLE);
                                 A.setOnClickListener(new View.OnClickListener() {
                                     @Override
                                     public void onClick(final View v) {
@@ -130,20 +136,13 @@ public class LiveGame extends AppCompatActivity {
                                         B.setVisibility(v.INVISIBLE);
                                         C.setVisibility(v.INVISIBLE);
                                         D.setVisibility(v.INVISIBLE);
-                                        socket.emit("playerAnswer",choicesA, new Ack() {
+                                        socket.emit("player-answer",choicesA, new Ack() {
                                             @Override
                                             public void call(Object... args) {
                                                 Boolean response=(Boolean)args[0];
                                                 result=response;
                                                 clickedtime=1;
-                                               /* runOnUiThread(new Runnable() {
-                                                    @Override
-                                                    public void run() {
-                                                        setContentView(R.layout.afterchoosingquestion);
-                                                        waiting.setVisibility(v.VISIBLE);
-                                                        result1.setVisibility(v.INVISIBLE);
-                                                    }
-                                                });*/
+
                                             }
                                         });
                                     }
@@ -157,7 +156,7 @@ public class LiveGame extends AppCompatActivity {
                                         B.setVisibility(v.INVISIBLE);
                                         C.setVisibility(v.INVISIBLE);
                                         D.setVisibility(v.INVISIBLE);
-                                        socket.emit("playerAnswer",choicesB, new Ack() {
+                                        socket.emit("player-answer",choicesB, new Ack() {
                                             @Override
                                             public void call(Object... args) {
                                                 Boolean response=(Boolean)args[0];
@@ -184,7 +183,7 @@ public class LiveGame extends AppCompatActivity {
                                         B.setVisibility(v.INVISIBLE);
                                         C.setVisibility(v.INVISIBLE);
                                         D.setVisibility(v.INVISIBLE);
-                                        socket.emit("playerAnswer",choicesC, new Ack() {
+                                        socket.emit("player-answer",choicesC, new Ack() {
                                             @Override
                                             public void call(Object... args) {
                                                 Boolean response=(Boolean)args[0];
@@ -211,7 +210,7 @@ public class LiveGame extends AppCompatActivity {
                                         B.setVisibility(v.INVISIBLE);
                                         C.setVisibility(v.INVISIBLE);
                                         D.setVisibility(v.INVISIBLE);
-                                        socket.emit("playerAnswer",choicesD, new Ack() {
+                                        socket.emit("player-answer",choicesD, new Ack() {
                                             @Override
                                             public void call(Object... args) {
                                                 Boolean response=(Boolean)args[0];
@@ -243,29 +242,40 @@ public class LiveGame extends AppCompatActivity {
                                     waiting.setVisibility(v.VISIBLE);
                                     result1.setVisibility(v.INVISIBLE);
                                 }*/
-                                socket.on("open", new Emitter.Listener() {
+                                socket.on("get-question-results", new Emitter.Listener() {
                                     @Override
                                     public void call(Object... args) {
-                                        runOnUiThread(new Runnable() {
+                                        socket.emit("question-results", new Ack() {
                                             @Override
-                                            public void run() {
-                                                if(result==true){
-                                                    result1.setBackgroundColor(Color.parseColor("#00FF00"));
-                                                    result1.setText("Correct\n Congratulation ！");
+                                            public void call(Object... args) {
+                                                final JSONObject questionresuls=(JSONObject) args[0] ;
+                                                runOnUiThread(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+                                                        try {
+                                                            if(questionresuls.getBoolean("answerResult")==true){
+                                                                result1.setBackgroundColor(Color.parseColor("#00FF00"));
+                                                                result1.setText("Correct\n Congratulation ！\n Rank: "+questionresuls.getInt("rank")+"\n Points:"+questionresuls.getInt("points"));
 
-                                                }else {
-                                                    result1.setBackgroundColor(Color.parseColor("#FF0000"));
-                                                    result1.setText("Incorrect\n Don't worry,nobody's perfect");
-                                                }
+                                                            }else {
+                                                                result1.setBackgroundColor(Color.parseColor("#FF0000"));
+                                                                result1.setText("Incorrect\n Nobody's perfect\n Rank: "+questionresuls.getInt("rank")+"\n Points:"+questionresuls.getInt("points"));
+                                                            }
+                                                        } catch (JSONException e) {
+                                                            e.printStackTrace();
+                                                        }
 
-                                                result1.setVisibility(v.VISIBLE);
-                                                A.setVisibility(v.INVISIBLE);
-                                                B.setVisibility(v.INVISIBLE);
-                                                C.setVisibility(v.INVISIBLE);
-                                                D.setVisibility(v.INVISIBLE);
+                                                        result1.setVisibility(v.VISIBLE);
+                                                        A.setVisibility(v.INVISIBLE);
+                                                        B.setVisibility(v.INVISIBLE);
+                                                        C.setVisibility(v.INVISIBLE);
+                                                        D.setVisibility(v.INVISIBLE);
 
+                                                    }
+                                                });
                                             }
                                         });
+
                                     }
                                 });
 
@@ -280,10 +290,10 @@ public class LiveGame extends AppCompatActivity {
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }
-        socket.on("game-over", new Emitter.Listener() {
+        socket.on("player-game-over", new Emitter.Listener() {
             @Override
             public void call(Object... args) {
-                socket.emit("get-overall-result", new Ack() {
+                socket.emit("get-overall-results", new Ack() {
                     @Override
                     public void call(Object... args) {
                         final JSONObject totalresult= (JSONObject) args[0];
@@ -309,7 +319,7 @@ public class LiveGame extends AppCompatActivity {
                                         studentsummary.setTextSize(TypedValue.COMPLEX_UNIT_IN,0.15f);
                                         studentsummary.setGravity(Gravity.CENTER_HORIZONTAL);
                                         studentsummary.setTypeface(boldTypeface);
-                                        studentsummary.setText("\n\nScore :" + totalresult.getInt("score") + "\n" + "Correct :" + totalresult.getInt("correct") + "\n" + "Incorrect: " + totalresult.getInt("incorrect"));
+                                        studentsummary.setText("\n\nScore :" + totalresult.getInt("points") + "\n" + "Correct :" + totalresult.getInt("correct") + "\n" + "Incorrect: " + totalresult.getInt("incorrect")+"\n" + "Unattempted: " + totalresult.getInt("unattempted"));
                                     } catch (Exception e) {
                                         e.printStackTrace();
                                     }
@@ -324,9 +334,10 @@ public class LiveGame extends AppCompatActivity {
                 });
             }
         });
-        socket.on("hoster-left", new Emitter.Listener() {
+        socket.on("hoster-disconnect", new Emitter.Listener() {
             @Override
             public void call(Object... args) {
+                socket.emit("disconnect");
               socket.disconnect();
               finish();
             }
@@ -335,7 +346,7 @@ public class LiveGame extends AppCompatActivity {
 
     }
     public void onBackPressed() {
-
+        socket.disconnect();
         socket.disconnect();
         finish();
     }
