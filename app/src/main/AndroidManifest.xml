@@ -15,7 +15,8 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">
-        <activity android:name=".View.PlayedReportDetail"></activity>
+        <activity android:name=".View.ExpandableActivity"></activity>
+        <activity android:name=".View.PlayedReportDetail" />
         <activity android:name=".View.FragmentHostedPlayerReport" />
         <activity android:name=".View.notification" />
         <activity android:name=".View.member_list_view" />

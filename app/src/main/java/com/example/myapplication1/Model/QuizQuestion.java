@@ -19,6 +19,10 @@ public class QuizQuestion {
     @Expose
     private int timer;
 
+    public QuizQuestion(String question) {
+        this.question = question;
+    }
+
     public List<Choice> getChoices() {
         return choices;
     }

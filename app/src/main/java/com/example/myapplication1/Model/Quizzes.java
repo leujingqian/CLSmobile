@@ -31,6 +31,10 @@ public class Quizzes {
         this.questions = questions;
     }
 
+    public Quizzes(String title) {
+        this.title = title;
+    }
+
     public Integer getPlays() {
         return plays;
     }
@@ -63,7 +67,7 @@ public class Quizzes {
         this.creator = creator;
     }
 
-    public List<QuizQuestion> getQuestions() {
+        public List<QuizQuestion> getQuestions() {
         return questions;
     }
 
